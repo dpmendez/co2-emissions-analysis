@@ -140,14 +140,14 @@ def download_world_bank_data(indicators: dict, start_year: int, end_year: int) -
                 
                 all_data.append(df_temp)
                 successful_indicators.append(name)
-                print(f"✓ ({len(df_temp)} rows)")
+                print(f"({len(df_temp)} rows)")
             else:
                 failed_indicators.append((code, name, "No data returned"))
-                print("✗ (no data)")
+                print("(no data)")
                 
         except Exception as e:
             failed_indicators.append((code, name, str(e)))
-            print(f"✗ ({str(e)[:50]})")
+            print(f"({str(e)[:50]})")
     
     if not all_data:
         print("\nERROR: No data could be downloaded!")
@@ -283,15 +283,15 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
         if pct > 0:
             print(f"  {col}: {pct:.1f}%")
     
-    # Step 5: Drop countries with too much missing predictor data (>60%)
+    # Step 5: Drop countries with too much missing predictor data (>50%)
     if 'country_code' in df.columns:
         country_missing = df.groupby('country_code')[numeric_cols].apply(
             lambda x: x.isnull().mean().mean()
         )
-        countries_to_drop = country_missing[country_missing > 0.6].index.tolist()
+        countries_to_drop = country_missing[country_missing > 0.5].index.tolist()
         
         if countries_to_drop:
-            print(f"\nDropping {len(countries_to_drop)} countries with >60% missing data")
+            print(f"\nDropping {len(countries_to_drop)} countries with >50% missing data")
             df = df[~df['country_code'].isin(countries_to_drop)]
     
     # Step 6: Interpolate missing values within each country
