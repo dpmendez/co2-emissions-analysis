@@ -551,18 +551,37 @@ For CO2 emissions analysis, we need predictors that capture:
 - **Methodology**: IPCC AR5 (5th Assessment Report) for CO2 indicators
 
 
-### 1.3 Indicator Codes Used
+### 1.2 Indicator Codes Used
 
-| Category | Code | Description |
-|----------|------|-------------|
-| **CO2 Total** | EN.GHG.CO2.MT.CE.AR5 | CO2 emissions total (Mt CO2e) |
-| **CO2 Per Capita** | EN.GHG.CO2.PC.CE.AR5 | CO2 per capita (t CO2e/cap) |
-| **CO2 Transport** | EN.GHG.CO2.TR.MT.CE.AR5 | Transport sector emissions |
-| **CO2 Power** | EN.GHG.CO2.PI.MT.CE.AR5 | Power industry emissions |
-| **GDP** | NY.GDP.MKTP.CD | GDP (current US$) |
-| **GDP per Capita** | NY.GDP.PCAP.CD | GDP per capita |
-| **Population** | SP.POP.TOTL | Total population |
-| **Renewable Energy** | EG.FEC.RNEW.ZS | Renewable energy share (%) |
+| Category | Code | Variable Name | Description |
+|----------|------|---------------|-------------|
+| **CO2 - Target** | EN.GHG.CO2.MT.CE.AR5 | `co2_emissions_mt` | CO2 emissions total (Mt CO2e) |
+| **CO2 - Target** | EN.GHG.CO2.PC.CE.AR5 | `co2_emissions_per_capita` | CO2 per capita (t CO2e/cap) |
+| **CO2 - Sectoral** | EN.GHG.CO2.TR.MT.CE.AR5 | `co2_transport_mt` | Transport sector emissions |
+| **CO2 - Sectoral** | EN.GHG.CO2.PI.MT.CE.AR5 | `co2_power_industry_mt` | Power industry emissions |
+| **CO2 - Sectoral** | EN.GHG.CO2.BU.MT.CE.AR5 | `co2_buildings_mt` | Buildings sector emissions |
+| **CO2 - Sectoral** | EN.GHG.CO2.IC.MT.CE.AR5 | `co2_industrial_mt` | Industrial combustion emissions |
+| **Economic** | NY.GDP.MKTP.CD | `gdp_current_usd` | GDP (current US$) |
+| **Economic** | NY.GDP.PCAP.CD | `gdp_per_capita` | GDP per capita (current US$) |
+| **Economic** | NY.GDP.MKTP.KD.ZG | `gdp_growth` | GDP growth (annual %) |
+| **Energy** | EG.USE.PCAP.KG.OE | `energy_use_per_capita` | Energy use (kg oil equiv. per capita) |
+| **Energy** | EG.USE.ELEC.KH.PC | `electric_power_consumption` | Electric power consumption (kWh per capita) |
+| **Energy** | EG.FEC.RNEW.ZS | `renewable_energy_pct` | Renewable energy (% of total final consumption) |
+| **Energy** | EG.ELC.FOSL.ZS | `fossil_fuel_electricity_pct` | Electricity from fossil fuels (%) |
+| **Demographic** | SP.POP.TOTL | `population` | Population, total |
+| **Demographic** | SP.URB.TOTL.IN.ZS | `urban_pop_pct` | Urban population (% of total) |
+| **Demographic** | EN.POP.DNST | `population_density` | Population density (people/sq km) |
+| **Structural** | NV.IND.TOTL.ZS | `industry_value_added_pct` | Industry value added (% of GDP) |
+| **Structural** | NV.AGR.TOTL.ZS | `agriculture_value_added_pct` | Agriculture value added (% of GDP) |
+| **Structural** | NV.SRV.TOTL.ZS | `services_value_added_pct` | Services value added (% of GDP) |
+| **Development** | EG.ELC.ACCS.ZS | `access_to_electricity_pct` | Access to electricity (% of population) |
+| **Development** | AG.LND.FRST.ZS | `forest_area_pct` | Forest area (% of land area) |
+
+**Derived Features (created during preprocessing):**
+- `log_gdp` - Natural log of GDP
+- `log_population` - Natural log of population  
+- `log_co2` - Natural log of CO2 emissions
+- `co2_intensity` - CO2 emissions per billion USD GDP
 
 ---
 
@@ -570,12 +589,13 @@ For CO2 emissions analysis, we need predictors that capture:
 
 ### 2.1 Cleaning Steps
 
-1. **Removed Regional Aggregates**: Excluded World Bank regional groupings to focus on country-level data
-2. **Missing Data Handling**: 
-   - Dropped countries with >50% missing data
+1. **Removed Regional Aggregates**: Excluded World Bank regional groupings (WLD, EUU, etc.) to focus on country-level data
+2. **Dropped Countries Without CO2 Data**: Removed countries that have no CO2 emissions data (target variable must be present)
+3. **Missing Predictor Handling**: 
+   - Dropped countries with >50% missing predictor data
    - Applied linear interpolation for gaps ≤3 years
    - Used forward/backward fill for edge values
-3. **Derived Features**: Created log transforms and CO2 intensity metrics
+4. **Derived Features**: Created log transforms and CO2 intensity metrics
 
 ### 2.2 Data Quality
 
