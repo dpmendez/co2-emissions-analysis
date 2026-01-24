@@ -513,34 +513,79 @@ def create_visualizations(df: pd.DataFrame, priority_results: dict,
     plt.close()
     print("Saved: priority_countries.png")
     
-    # 2. Sector Analysis
+    # 2. Sector Analysis (with improved color palette, sorted high to low)
     if 'global_sectors' in sector_results:
-        fig, ax = plt.subplots(figsize=(8, 6))
+        fig, ax = plt.subplots(figsize=(10, 8))
         
         sectors = list(sector_results['global_sectors'].keys())
         shares = [sector_results['global_sectors'][s]['share_pct'] for s in sectors]
         
-        colors = plt.cm.Set2(np.linspace(0, 1, len(sectors)))
-        ax.pie(shares, labels=[s.replace('_', ' ').title() for s in sectors], 
-               autopct='%1.1f%%', colors=colors)
-        ax.set_title('Global CO2 Emissions by Sector')
+        # Sort by share (highest to lowest)
+        sorted_data = sorted(zip(sectors, shares), key=lambda x: x[1], reverse=True)
+        sectors = [x[0] for x in sorted_data]
+        shares = [x[1] for x in sorted_data]
+        
+        # Professional, colorblind-friendly palette
+        sector_colors = {
+            'transport': '#2E86AB',      # Blue
+            'power': '#A23B72',          # Magenta
+            'industry': '#F18F01',       # Orange
+            'buildings': '#C73E1D',      # Red
+            'other': '#3B1F2B'           # Dark purple
+        }
+        colors = [sector_colors.get(s.lower(), '#888888') for s in sectors]
+        
+        # Use horizontal bar chart instead of pie (easier to compare)
+        y_pos = np.arange(len(sectors))
+        bars = ax.barh(y_pos, shares, color=colors, edgecolor='white', linewidth=1.5)
+        
+        # Add value labels
+        for bar, share in zip(bars, shares):
+            ax.text(bar.get_width() + 1, bar.get_y() + bar.get_height()/2,
+                    f'{share:.1f}%', va='center', fontsize=11, fontweight='bold')
+        
+        ax.set_yticks(y_pos)
+        ax.set_yticklabels([s.replace('_', ' ').title() for s in sectors], fontsize=11)
+        ax.set_xlabel('Share of CO2 Emissions (%)', fontsize=12)
+        ax.set_title('Global CO2 Emissions by Sector', fontsize=14, fontweight='bold')
+        ax.grid(True, alpha=0.3, axis='x')
+        ax.set_xlim(0, max(shares) * 1.15)
+        ax.invert_yaxis()  # Highest at top
         
         plt.tight_layout()
         plt.savefig(output_dir / 'sector_breakdown.png', dpi=150, bbox_inches='tight')
         plt.close()
         print("Saved: sector_breakdown.png")
     
-    # 3. Country Type Distribution
+    # 3. Country Type Distribution (with improved color palette)
     if 'country_type' in df.columns:
         fig, ax = plt.subplots(figsize=(10, 6))
         
-        type_emissions = df.groupby('country_type')['co2_emissions_mt'].sum().sort_values(ascending=True)
-        colors = plt.cm.Set3(np.linspace(0, 1, len(type_emissions)))
+        type_emissions = df.groupby('country_type')['co2_emissions_mt'].sum().sort_values(ascending=False)
         
-        ax.barh(type_emissions.index, type_emissions.values, color=colors)
-        ax.set_xlabel('Total CO2 Emissions (Mt)')
-        ax.set_title('Emissions by Country Type')
+        # Professional color palette for country types
+        type_colors = {
+            'High-Income High-Emitter': '#C73E1D',      # Red - high concern
+            'High-Income Low-Emitter': '#2E86AB',       # Blue - doing well
+            'Clean Energy Leader': '#28A745',           # Green - leaders
+            'Middle-Income Fossil-Dependent': '#F18F01', # Orange - needs transition
+            'Middle-Income Transitioning': '#6F42C1',   # Purple - in progress
+            'Low-Income': '#6C757D'                     # Gray - different priorities
+        }
+        colors = [type_colors.get(t, '#888888') for t in type_emissions.index]
+        
+        bars = ax.barh(type_emissions.index, type_emissions.values, color=colors, 
+                       edgecolor='white', linewidth=1.5)
+        
+        # Add value labels
+        for bar, val in zip(bars, type_emissions.values):
+            ax.text(bar.get_width() + 50, bar.get_y() + bar.get_height()/2,
+                    f'{val:,.0f} Mt', va='center', fontsize=10, fontweight='bold')
+        
+        ax.set_xlabel('Total CO2 Emissions (Mt)', fontsize=12)
+        ax.set_title('CO2 Emissions by Country Type', fontsize=14, fontweight='bold')
         ax.grid(True, alpha=0.3, axis='x')
+        ax.invert_yaxis()  # Highest at top
         
         plt.tight_layout()
         plt.savefig(output_dir / 'emissions_by_country_type.png', dpi=150, bbox_inches='tight')
