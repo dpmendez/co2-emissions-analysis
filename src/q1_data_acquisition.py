@@ -456,23 +456,72 @@ def create_visualizations(df: pd.DataFrame, output_dir: Path):
             print(f"Saved: co2_trends.png")
         except Exception as e:
             print(f"Error creating CO2 trends: {e}")
-    
-    # 3. GDP vs CO2 scatter
+
+    # 3. GDP vs CO2 scatter (with labels and log scale)
     if co2_col and 'gdp_current_usd' in df.columns:
         try:
-            plt.figure(figsize=(10, 8))
+            fig, axes = plt.subplots(1, 2, figsize=(16, 7))
             latest_year = df['year'].max() if 'year' in df.columns else None
-            plot_data = df[df['year'] == latest_year] if latest_year else df
+            plot_data = df[df['year'] == latest_year].copy() if latest_year else df.copy()
             
-            plt.scatter(
+            # Remove rows with missing data
+            plot_data = plot_data.dropna(subset=['gdp_current_usd', co2_col])
+            plot_data = plot_data[plot_data[co2_col] > 0]
+            plot_data = plot_data[plot_data['gdp_current_usd'] > 0]
+            
+            # --- Left plot: Linear scale ---
+            ax = axes[0]
+            ax.scatter(
                 plot_data['gdp_current_usd'] / 1e12,
                 plot_data[co2_col],
-                alpha=0.6, s=80
+                alpha=0.6, s=80, c='steelblue'
             )
-            plt.xlabel('GDP (Trillion USD)')
-            plt.ylabel(f'CO2 Emissions ({co2_col})')
-            plt.title(f'GDP vs CO2 Emissions ({latest_year})')
-            plt.grid(True, alpha=0.3)
+            
+            # Add labels for top emitters
+            if 'country_code' in plot_data.columns:
+                top_emitters = plot_data.nlargest(5, co2_col)
+                for _, row in top_emitters.iterrows():
+                    ax.annotate(
+                        row['country_code'],
+                        (row['gdp_current_usd'] / 1e12, row[co2_col]),
+                        xytext=(5, 5), textcoords='offset points',
+                        fontsize=9, fontweight='bold'
+                    )
+            
+            ax.set_xlabel('GDP (Trillion USD)', fontsize=11)
+            ax.set_ylabel('CO2 Emissions (Mt)', fontsize=11)
+            ax.set_title(f'GDP vs CO2 Emissions ({latest_year}) - Linear Scale', fontsize=12)
+            ax.grid(True, alpha=0.3)
+            
+            # --- Right plot: Log-log scale ---
+            ax = axes[1]
+            ax.scatter(
+                plot_data['gdp_current_usd'] / 1e9,  # Billions for log scale
+                plot_data[co2_col],
+                alpha=0.6, s=80, c='steelblue'
+            )
+            ax.set_xscale('log')
+            ax.set_yscale('log')
+            
+            # Add labels for notable countries
+            if 'country_code' in plot_data.columns:
+                top_emitters = plot_data.nlargest(5, co2_col)
+                high_gdp = plot_data.nlargest(5, 'gdp_current_usd')
+                label_countries = pd.concat([top_emitters, high_gdp]).drop_duplicates()
+                
+                for _, row in label_countries.iterrows():
+                    ax.annotate(
+                        row['country_code'],
+                        (row['gdp_current_usd'] / 1e9, row[co2_col]),
+                        xytext=(5, 5), textcoords='offset points',
+                        fontsize=9, fontweight='bold'
+                    )
+            
+            ax.set_xlabel('GDP (Billion USD, log scale)', fontsize=11)
+            ax.set_ylabel('CO2 Emissions (Mt, log scale)', fontsize=11)
+            ax.set_title(f'GDP vs CO2 Emissions ({latest_year}) - Log Scale', fontsize=12)
+            ax.grid(True, alpha=0.3, which='both')
+            
             plt.tight_layout()
             plt.savefig(output_dir / 'gdp_vs_co2.png', dpi=150, bbox_inches='tight')
             plt.close()
@@ -651,7 +700,7 @@ For CO2 emissions analysis, we need predictors that capture:
     with open(output_path, 'w') as f:
         f.write(report)
     
-    print(f"\n✓ Saved report: {output_path}")
+    print(f"\nSaved report: {output_path}")
 
 
 # =============================================================================
@@ -691,7 +740,7 @@ def main():
     # Save raw data
     raw_path = data_raw_dir / 'co2_data_raw.csv'
     df_raw.to_csv(raw_path, index=False)
-    print(f"\n✓ Raw data saved: {raw_path}")
+    print(f"\nRaw data saved: {raw_path}")
     
     # Preprocess
     df_clean = preprocess_data(df_raw)
@@ -699,14 +748,14 @@ def main():
     # Save processed data
     clean_path = data_processed_dir / 'co2_data_clean.csv'
     df_clean.to_csv(clean_path, index=False)
-    print(f"✓ Cleaned data saved: {clean_path}")
+    print(f"Cleaned data saved: {clean_path}")
     
     # Statistics
     stats = generate_summary_statistics(df_clean)
     
     # Visualizations
     create_visualizations(df_clean, figures_dir)
-    
+
     # Save correlation matrix
     if 'correlation_matrix' in stats:
         stats['correlation_matrix'].to_csv(data_processed_dir / 'correlation_matrix.csv')
